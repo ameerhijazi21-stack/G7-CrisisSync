@@ -17,9 +17,11 @@
 This document specifies the requirements for two CrisisSync operations:
 
 1. **Reserving a resource package for a task**, including the Field Commander's report of task completion.
-2. **Generating the SLA (time-to-resolution) report.**
+2. **Generating the SLA (on-time compliance) report.**
 
 **Assumption A1:** The SLA report for a month includes every event whose last task reached a final state during that month. Cancelled events are excluded.
+
+**Assumption A2:** A task is *on time* if its actual duration (from Active to Completed) is less than or equal to its estimated duration.
 
 ---
 
@@ -37,15 +39,17 @@ This document specifies the requirements for two CrisisSync operations:
 | FR-06 | The system shall allow only the Field Commander assigned to a task to report its completion. |
 | FR-07 | Upon a completion report, the system shall change the task state to **Completed**, set all of the task's resources to Available, and move to Ready every dependent task whose prerequisite tasks are all Completed. |
 | FR-08 | The system shall record every reservation, task state change and resource release in the audit log, with its timestamp and the acting user. |
+| FR-09 | The system shall reject a resource package that does not contain exactly one Field Commander. |
+| FR-10 | In automatic allocation mode, the system shall select resources according to the configured allocation criterion (default: nearest available resource). If a selected resource is taken by another Dispatcher during the transaction, the system shall retry with the next alternative, up to **2** retry attempts, and shall notify the Dispatcher if all attempts fail. |
 
 ### 2.2 SLA report
 
 | ID | Requirement |
 |----|-------------|
-| FR-09 | The system shall automatically generate the SLA report at the end of each calendar month, according to the system clock. |
-| FR-10 | The SLA report shall show, for each event type, the average time from the opening of an event until the completion of its last task. |
-| FR-11 | The system shall allow the System Administrator to generate the SLA report on demand for a selected past month. |
-| FR-12 | The system shall allow only the System Administrator to view SLA reports. |
+| FR-11 | The system shall automatically generate the SLA report at the end of each calendar month, according to the system clock. |
+| FR-12 | The SLA report shall show, for each event type, the average time from the opening of an event until the completion of its last task, and the percentage of tasks completed on time (Assumption A2). |
+| FR-13 | The system shall allow the System Administrator to generate the SLA report on demand for a selected past month. |
+| FR-14 | The system shall allow only the System Administrator to view SLA reports. |
 
 ---
 
@@ -75,10 +79,12 @@ This document specifies the requirements for two CrisisSync operations:
 | FR-06 | Report Task Completion | AT-05 |
 | FR-07 | Report Task Completion | AT-04 |
 | FR-08 | Reserve Resource Package, Report Task Completion | AT-01, AT-04 |
-| FR-09 | Generate Monthly Reports | AT-06 |
-| FR-10 | Generate SLA Report | AT-06 |
-| FR-11 | Generate SLA Report | AT-07 |
-| FR-12 | Generate SLA Report | AT-12 |
+| FR-09 | Reserve Resource Package | AT-14 |
+| FR-10 | Reserve Resource Package | AT-15 |
+| FR-11 | Generate Monthly Reports | AT-06 |
+| FR-12 | Generate SLA Report | AT-06 |
+| FR-13 | Generate SLA Report | AT-07 |
+| FR-14 | Generate SLA Report | AT-12 |
 | NFR-01 | Reserve Resource Package | AT-08 |
 | NFR-02 | Reserve Resource Package, Report Task Completion | AT-09 |
 | NFR-03 | Generate SLA Report | AT-10 |
@@ -115,6 +121,34 @@ Then ...
 Given ...
 When ...
 Then ...
+```
+
+#### AT-14 — Package without exactly one Field Commander (error flow)
+```gherkin
+Given task "Debris Removal" is in the Ready state
+  And the Dispatcher selects a package with a bulldozer and an operator but no Field Commander
+When the Dispatcher submits the reservation
+Then the system shall reject the package with the message "A package must contain exactly one Field Commander"
+  And no resource status shall change
+  And the task shall remain in the Ready state
+```
+
+#### AT-15 — Automatic allocation with retry (normal, error and recovery flow)
+```gherkin
+Given task "Evacuation" is in the Ready state and needs one ambulance
+  And automatic allocation by "nearest available resource" is selected
+  And "AMB-1" is the nearest Available ambulance and "AMB-2" is the next nearest
+When "AMB-1" is reserved by another Dispatcher during the transaction
+Then the system shall retry with "AMB-2"
+  And "AMB-2" shall be Reserved for "Evacuation"
+  And the task shall move to the Active state
+
+Given the nearest ambulance and the next 2 alternatives are all taken during the transaction
+When the system runs automatic allocation for task "Evacuation"
+Then the system shall stop after 2 retry attempts
+  And roll back the transaction
+  And notify the Dispatcher that automatic allocation failed
+  And the task shall remain in the Ready state
 ```
 
 ### 5.2 Task completion
