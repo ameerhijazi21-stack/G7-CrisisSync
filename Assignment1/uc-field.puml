@@ -1,0 +1,27 @@
+@startuml uc-field
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Field Commander" as Commander
+actor "Field Crew Member" as Crew
+actor "Logistics Officer" as Logistics
+
+rectangle "CrisisSync" {
+  usecase "UC-06 Report Task Completion" as UC06
+  usecase "UC-07 View Assigned Tasks" as UC07
+  usecase "UC-08 Report Shift Start / Availability" as UC08
+  usecase "UC-09 Report Equipment Fault" as UC09
+  usecase "UC-10 Update Maintenance Status" as UC10
+  usecase "UC-11 Transfer Equipment Between Stations" as UC11
+}
+
+Commander -- UC06
+Commander -- UC07
+Commander -- UC09
+Crew -- UC07
+Crew -- UC08
+Crew -- UC09
+Logistics -- UC10
+Logistics -- UC11
+
+@enduml
