@@ -1,0 +1,42 @@
+UC-06 Report Task Completion
+
+Primary actor: Field Commander
+
+Preconditions: The Field Commander is signed in. The task is Active, and the commander has been assigned to lead it.
+
+Success postconditions: The task is Completed. Its reserved resources are released and become available. Each dependent task whose prerequisites are all Completed moves to Ready.
+
+Failure postconditions: The task status, resource reservations, and dependent task statuses remain unchanged.
+
+Main flow
+1. The Field Commander selects the assigned task and reports its completion.
+2. CrisisSync verifies that the commander is assigned to lead the task and that the task is still Active.
+3. CrisisSync marks the task Completed and releases its reserved resources.
+4. CrisisSync moves each dependent task whose prerequisites are all Completed to Ready.
+5. CrisisSync records the changes in the audit log, updates the relevant stations, and confirms completion.
+
+Extensions
+2a. If the commander is not assigned to lead the task, CrisisSync rejects the report and displays an authorization message. The assigned commander can still report completion.
+2b. If the task is no longer Active, CrisisSync rejects the report and displays the current task status.
+
+
+UC-09 Report Equipment Fault
+
+Primary actors: Field Crew Member, Field Commander
+
+Preconditions: The reporter is signed in and is assigned to an Active task as a crew member or as its commander.
+
+Success postconditions: The reported equipment is marked faulty and cannot be reserved. The Dispatcher is notified that replacement equipment is needed.
+
+Failure postconditions: If the report is rejected, the equipment status remains unchanged.
+
+Main flow
+1. The reporter selects an equipment item used in the Active task and submits a fault report.
+2. CrisisSync verifies that the task is still Active and that the item is assigned to it.
+3. CrisisSync immediately marks the item faulty and prevents it from being reserved.
+4. CrisisSync records the equipment update in the audit log and sends the updated status to the relevant stations.
+5. CrisisSync notifies the Dispatcher that replacement equipment is needed.
+
+Extensions
+2a. If the item is not assigned to the task, CrisisSync rejects the report and prompts the reporter to select an item assigned to the task.
+2b. If the task is no longer Active, CrisisSync rejects the report for that task and displays its current status.
