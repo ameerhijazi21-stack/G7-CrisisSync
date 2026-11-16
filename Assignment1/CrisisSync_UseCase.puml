@@ -1,0 +1,92 @@
+@startuml CrisisSync_UseCase
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle stick
+
+' ===== Human actors (left of the system boundary) =====
+actor "System Administrator" as AC01
+actor "Logistics Officer" as AC02
+actor "Dispatcher" as AC03
+actor "Field Commander" as AC04
+actor "Field Crew Member" as AC05
+
+' ===== Non-human actors (right of the system boundary) =====
+actor "National Clearing\nSettlement System" as AC06 <<system>>
+actor "Monthly Scheduler" as AC07 <<timer>>
+
+rectangle "CrisisSync" {
+  usecase "Log In" as UC01
+  usecase "Manage Users and Permissions" as UC02
+  usecase "Load Initial Data" as UC03
+  usecase "View and Filter Event History" as UC04
+  usecase "View / Generate Monthly Reports" as UC05
+  usecase "Generate Resource Utilization Report" as UC06
+  usecase "Generate SLA Report" as UC07
+  usecase "Manage Equipment and Locations" as UC08
+  usecase "Update Crew Availability" as UC09
+  usecase "Create Event" as UC10
+  usecase "Define Tasks and Dependencies" as UC11
+  usecase "Reserve Resource Package" as UC12
+  usecase "Automatically Allocate Resources" as UC13
+  usecase "Monitor Open Events" as UC14
+  usecase "Cancel Task" as UC15
+  usecase "Cancel Event" as UC16
+  usecase "Close Event" as UC17
+  usecase "Process Settlement" as UC18
+  usecase "Replace Released Resource" as UC19
+  usecase "View Assigned Events and Tasks" as UC20
+  usecase "View Assigned Task" as UC21
+  usecase "Report Task Completion" as UC22
+  usecase "Report Equipment Failure" as UC23
+  usecase "Report Shift Start and Readiness" as UC24
+  usecase "Retry Allocation with Alternative" as UC26
+  usecase "Handle Settlement Rejection" as UC25
+}
+
+' ===== Actor associations (solid lines, no arrows) =====
+AC01 -- UC01
+AC01 -- UC02
+AC01 -- UC03
+AC01 -- UC04
+AC01 -- UC05
+
+AC02 -- UC01
+AC02 -- UC08
+AC02 -- UC09
+
+AC03 -- UC01
+AC03 -- UC10
+AC03 -- UC11
+AC03 -- UC12
+AC03 -- UC13
+AC03 -- UC14
+AC03 -- UC15
+AC03 -- UC16
+AC03 -- UC17
+AC03 -- UC19
+
+AC04 -- UC01
+AC04 -- UC20
+AC04 -- UC22
+AC04 -- UC23
+AC04 -- UC24
+
+AC05 -- UC01
+AC05 -- UC21
+AC05 -- UC23
+AC05 -- UC24
+
+UC18 -- AC06
+UC06 -- AC07
+UC07 -- AC07
+
+' ===== include: base --> included =====
+UC13 ..> UC12 : <<include>>
+UC17 ..> UC18 : <<include>>
+UC05 ..> UC06 : <<include>>
+UC05 ..> UC07 : <<include>>
+
+' ===== extend: extension --> base =====
+UC26 ..> UC13 : <<extend>>
+UC25 ..> UC17 : <<extend>>
+@enduml
