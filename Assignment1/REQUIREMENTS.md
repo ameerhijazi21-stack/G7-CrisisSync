@@ -16,13 +16,16 @@
 
 ## 1. Scope
 
-This document specifies the requirements of the CrisisSync emergency-management system.
+This document specifies the requirements and acceptance tests for the two operations defined in Assignment 1, Part B:
 
-- Sections 3 and 4 define the functional (FR) and non-functional (NFR) requirements of the **entire system**.
-- Section 6 defines the BDD acceptance tests for the **two operations in scope** (staff clarification, Moodle forum, 15.11.2026):
-  1. **OP-1:** Reserving a resource package for a task, including reporting task completion.
-  2. **OP-2:** Generating the SLA (timeliness and service-level) report.
-- Section 5 is the Requirements Traceability Matrix (RTM). It maps every requirement to the use case that realizes it and, for OP-1 and OP-2, to the acceptance test that verifies it.
+1. **OP-1:** Reserving a resource package for a task, including reporting task completion.
+2. **OP-2:** Generating the SLA (timeliness and service-level) report.
+
+As clarified by the course staff on the Moodle forum (17.11.2026), the Use Case model (in the .vpp file) covers the **entire system**, while the requirements, the traceability matrix and the acceptance tests cover **only these two operations**.
+
+- Sections 3 and 4 define the functional (FR) and non-functional (NFR) requirements of OP-1 and OP-2.
+- Section 5 is the Requirements Traceability Matrix (RTM). It maps every requirement to the use case that realizes it and to the acceptance test that verifies it.
+- Section 6 defines the BDD acceptance tests.
 
 Business rules clarified by the course staff on the Moodle forum (15.11.2026) are incorporated into the requirements.
 
@@ -40,90 +43,37 @@ Business rules clarified by the course staff on the Moodle forum (15.11.2026) ar
 
 ---
 
+---
+
 ## 3. Functional Requirements
 
-### 3.1 Access and administration
+### 3.1 Resource reservation and task completion (OP-1)
 
 | ID | Requirement | Use case |
 |---|---|---|
-| FR-01 | The system shall authenticate every user by username and password before granting access to any function. | UC01 Log In |
-| FR-02 | The system shall allow each user only the functions permitted for the user's role: System Administrator, Logistics Officer, Dispatcher, Field Commander or Field Crew Member. | UC01 Log In |
-| FR-03 | The system shall allow the System Administrator to create, update and deactivate user accounts and to assign a role to each account. | UC02 Manage Users and Permissions |
-| FR-04 | The system shall allow the System Administrator to load initial data from an SQL, JSON or CSV file, and shall reject the whole file, listing the invalid records, if any record is invalid. | UC03 Load Initial Data |
-| FR-05 | The system shall record every state transition and user action in a read-only audit log, with the timestamp and the user ID. | UC04 View and Filter Event History |
-| FR-06 | The system shall allow the System Administrator to filter the audit log by date range, event, event type, user and action type. | UC04 View and Filter Event History |
+| FR-01 | The system shall allow the Dispatcher to reserve a resource package manually only for a task in the Ready state. | UC12 Reserve Resource Package |
+| FR-02 | The system shall reserve all resources of a package in a single database transaction with row-level locking ("all or nothing"). | UC12 Reserve Resource Package |
+| FR-03 | The system shall reject a reservation that includes a resource whose status is Reserved, Unavailable or Faulty. | UC12 Reserve Resource Package |
+| FR-04 | If a reservation transaction fails, the system shall roll it back completely and notify the Dispatcher which resources were unavailable. | UC12 Reserve Resource Package |
+| FR-05 | On a successful reservation, the system shall set the task to Active, set every reserved resource to Reserved, open an assignment record for each resource, and push the update to all connected clients. | UC12 Reserve Resource Package |
+| FR-06 | The system shall select resources for automatic allocation by a pluggable selection criterion, where the default criterion is the nearest available resource. | UC13 Automatically Allocate Resources |
+| FR-07 | If a resource selected by automatic allocation is reserved concurrently, the system shall replace only the taken resources and retry the full package transaction, with at most two alternative attempts (three attempts in total). | UC13 Automatically Allocate Resources |
+| FR-08 | If automatic allocation fails, the system shall notify the Dispatcher and state whether no alternative resource existed or all attempts failed due to concurrent reservations. | UC13 Automatically Allocate Resources |
+| FR-09 | The system shall allow only the field commander assigned to an Active task to report its completion. | UC22 Report Task Completion |
+| FR-10 | The system shall reject a completion report while a package resource is missing, unless the Dispatcher has confirmed that the resource is no longer required. | UC22 Report Task Completion |
+| FR-11 | On task completion, the system shall set the task to Completed, record the completion time, release all its resources to Available, close their assignment records, and re-evaluate the dependent tasks. | UC22 Report Task Completion |
 
-### 3.2 Resource management
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-07 | The system shall allow the Logistics Officer to set the maintenance status of an equipment item (Available or Faulty) and to transfer an item between stations. | UC08 Manage Equipment and Locations |
-| FR-08 | The system shall allow the Logistics Officer to record exceptional unavailability of a crew member (e.g., illness), including a crew member who is currently reserved. | UC09 Update Crew Availability |
-| FR-09 | The system shall allow a field crew member or field commander to report shift start and readiness, and shall reject a request to mark themselves unavailable while they are reserved for a task. | UC24 Report Shift Start and Readiness |
-
-### 3.3 Events and tasks
+### 3.2 SLA report (OP-2)
 
 | ID | Requirement | Use case |
 |---|---|---|
-| FR-10 | The system shall allow the Dispatcher to open an event with a name, an event type (Building Collapse, Fire, Road Accident, Hazmat Leak or Natural Disaster) and a location, and shall record the opening time automatically. | UC10 Create Event |
-| FR-11 | The system shall allow the Dispatcher to define a task with a name, an estimated duration, prerequisite tasks and a resource package that contains exactly one field commander. | UC11 Define Tasks and Dependencies |
-| FR-12 | The system shall reject any dependency change that creates a cycle, and shall allow dependency changes only for tasks in the Blocked state. | UC11 Define Tasks and Dependencies |
-| FR-13 | The system shall move a task from Blocked to Ready when all of its prerequisite tasks are Completed. | UC11 Define Tasks and Dependencies |
-
-### 3.4 Resource reservation and task completion (OP-1)
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-14 | The system shall allow the Dispatcher to reserve a resource package manually only for a task in the Ready state. | UC12 Reserve Resource Package |
-| FR-15 | The system shall reserve all resources of a package in a single database transaction with row-level locking ("all or nothing"). | UC12 Reserve Resource Package |
-| FR-16 | The system shall reject a reservation that includes a resource whose status is Reserved, Unavailable or Faulty. | UC12 Reserve Resource Package |
-| FR-17 | If a reservation transaction fails, the system shall roll it back completely and notify the Dispatcher which resources were unavailable. | UC12 Reserve Resource Package |
-| FR-18 | On a successful reservation, the system shall set the task to Active, set every reserved resource to Reserved, open an assignment record for each resource, and push the update to all connected clients. | UC12 Reserve Resource Package |
-| FR-19 | The system shall select resources for automatic allocation by a pluggable selection criterion, where the default criterion is the nearest available resource. | UC13 Automatically Allocate Resources |
-| FR-20 | If a resource selected by automatic allocation is reserved concurrently, the system shall replace only the taken resources and retry the full package transaction, with at most two alternative attempts (three attempts in total). | UC13 Automatically Allocate Resources |
-| FR-21 | If automatic allocation fails, the system shall notify the Dispatcher and state whether no alternative resource existed or all attempts failed due to concurrent reservations. | UC13 Automatically Allocate Resources |
-| FR-22 | The system shall allow only the field commander assigned to an Active task to report its completion. | UC22 Report Task Completion |
-| FR-23 | The system shall reject a completion report while a package resource is missing, unless the Dispatcher has confirmed that the resource is no longer required. | UC22 Report Task Completion |
-| FR-24 | On task completion, the system shall set the task to Completed, record the completion time, release all its resources to Available, close their assignment records, and re-evaluate the dependent tasks. | UC22 Report Task Completion |
-
-### 3.5 Failures and replacements
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-25 | When an equipment failure is reported, the system shall set the item to Faulty, release it from its task, close its assignment record, keep the task Active and alert the Dispatcher. | UC23 Report Equipment Failure |
-| FR-26 | When a reserved crew member becomes unavailable, the system shall release the member from the task, close the assignment record, keep the task Active and alert the Dispatcher. | UC09 Update Crew Availability |
-| FR-27 | The system shall allow the Dispatcher to assign a replacement resource to an Active task, manually or automatically. If the replaced resource is the field commander, the task permissions shall transfer to the new commander. | UC19 Replace Released Resource |
-
-### 3.6 Cancellation and closing
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-28 | Before cancelling a task, the system shall show the Dispatcher the number of dependent tasks that will also be cancelled. | UC15 Cancel Task |
-| FR-29 | On confirmation, the system shall recompute the affected tasks under lock. If the result differs from what was shown, it shall abort and ask for confirmation again. Otherwise it shall cancel the task and its dependents and release their resources. | UC15 Cancel Task |
-| FR-30 | The system shall cancel an Open event together with all of its non-final tasks, and shall reject cancelling an event that is In Settlement. | UC16 Cancel Event |
-| FR-31 | The system shall allow closing an event only when all of its tasks are in a final state, and shall move the event to In Settlement in a transaction that only one Dispatcher can complete. | UC17 Close Event |
-| FR-32 | The system shall calculate the event costs from the assignment records and send one billing request per event, with a unique event ID, to the National Clearing Settlement System. | UC18 Process Settlement |
-| FR-33 | On settlement approval, the system shall store the transaction token and close the event. On rejection, failure or timeout, it shall return the event to Open and alert the Dispatcher. | UC18 Process Settlement |
-
-### 3.7 Monitoring
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-34 | The system shall display a live status screen of open events, task trees and task states, updated by server push without polling. Tasks that exceeded their estimated duration shall be highlighted. | UC14 Monitor Open Events |
-| FR-35 | The system shall allow field users to view only the events and tasks assigned to them. | UC20 View Assigned Events and Tasks, UC21 View Assigned Task |
-
-### 3.8 Reports (OP-2)
-
-| ID | Requirement | Use case |
-|---|---|---|
-| FR-36 | The system shall automatically generate the SLA report for the previous calendar month on the first day of every month at 02:00. | UC07 Generate SLA Report |
-| FR-37 | The SLA report shall include only events that were finally closed during the report month and that contain at least one Completed task. | UC07 Generate SLA Report |
-| FR-38 | The system shall calculate the handling time of each event from its opening time until its last Completed task, ignoring Cancelled tasks. | UC07 Generate SLA Report |
-| FR-39 | For each event type and for all types together, the SLA report shall show the number of events, the average handling time and the percentage of events handled within the SLA target. | UC07 Generate SLA Report |
-| FR-40 | The system shall allow the System Administrator to generate the SLA report on demand for any previous month. | UC05 View / Generate Monthly Reports |
-| FR-41 | If no event qualifies for the report month, the system shall generate the report with zero counts and the message "No qualifying events for this period". | UC07 Generate SLA Report |
-| FR-42 | If report generation fails, the system shall retry it up to 3 times at 10-minute intervals, then alert the System Administrator. It shall never store a partial report. | UC07 Generate SLA Report |
-| FR-43 | The system shall generate a monthly resource-utilization report with a graphical display. | UC06 Generate Resource Utilization Report |
+| FR-12 | The system shall automatically generate the SLA report for the previous calendar month on the first day of every month at 02:00. | UC07 Generate SLA Report |
+| FR-13 | The SLA report shall include only events that were finally closed during the report month and that contain at least one Completed task. | UC07 Generate SLA Report |
+| FR-14 | The system shall calculate the handling time of each event from its opening time until its last Completed task, ignoring Cancelled tasks. | UC07 Generate SLA Report |
+| FR-15 | For each event type and for all types together, the SLA report shall show the number of events, the average handling time and the percentage of events handled within the SLA target. | UC07 Generate SLA Report |
+| FR-16 | The system shall allow the System Administrator to generate the SLA report on demand for any previous month. | UC05 View / Generate Monthly Reports |
+| FR-17 | If no event qualifies for the report month, the system shall generate the report with zero counts and the message "No qualifying events for this period". | UC07 Generate SLA Report |
+| FR-18 | If report generation fails, the system shall retry it up to 3 times at 10-minute intervals, then alert the System Administrator. It shall never store a partial report. | UC07 Generate SLA Report |
 
 ---
 
@@ -132,70 +82,44 @@ Business rules clarified by the course staff on the Moodle forum (15.11.2026) ar
 | ID | Category | Requirement |
 |---|---|---|
 | NFR-01 | Performance | A manual reservation of a package of up to 20 resources shall complete, and its result shall be displayed, within 2 seconds for 95% of requests, with 20 concurrently connected clients. |
-| NFR-02 | Performance | A state change shall reach all connected clients by server push within 1 second for 95% of changes. |
+| NFR-02 | Performance | After a successful reservation, the task state change shall reach all connected clients by server push within 1 second for 95% of changes. |
 | NFR-03 | Performance | The SLA report for a month with up to 5,000 events shall be generated within 10 seconds. |
 | NFR-04 | Reliability | In a test of 100 simultaneous reservation attempts for the same resources from at least 2 stations, 0 resources shall be reserved for more than one task. |
 | NFR-05 | Reliability | 100% of failed reservation transactions shall leave no partial reservation in the database. |
-| NFR-06 | Reliability | A settlement request shall time out after 10 seconds. Repeated requests with the same event ID shall result in at most one charge. |
-| NFR-07 | Security | Passwords shall be stored only as salted hashes (bcrypt or PBKDF2). After 5 consecutive failed log-in attempts, the account shall be locked for 5 minutes. |
-| NFR-08 | Security | The server shall verify role permissions for 100% of requests. Unauthorized requests shall be rejected and recorded in the audit log. |
-| NFR-09 | Security | No application function shall allow modifying or deleting an audit-log entry. |
-| NFR-10 | Usability | A trained Dispatcher shall be able to complete a manual reservation within 60 seconds and in at most 5 user actions after selecting the task. |
-| NFR-11 | Usability | Every error message shall state the cause and the affected item by name (e.g., the unavailable resource). No message shall show a technical error code alone. |
-| NFR-12 | Maintainability | Adding a new allocation criterion or a new report type shall require implementing one new class against an existing interface, with no change to existing classes. |
-| NFR-13 | Portability | The client shall be a Java/JavaFX desktop application that communicates with the server through OCSF over TCP/IP on the local network. |
+| NFR-06 | Security | The server shall verify role permissions for 100% of task-completion reports and SLA report requests. Unauthorized requests shall be rejected and recorded in the audit log. |
+| NFR-07 | Usability | Every reservation error message shall state the cause and the affected resource by name. No message shall show a technical error code alone. |
 
 ---
 
 ## 5. Requirements Traceability Matrix (RTM)
 
-Acceptance tests cover OP-1 and OP-2, as instructed by the course staff. The remaining requirements are traced to their use cases.
-
 | Requirement | Use case | Acceptance test(s) |
 |---|---|---|
-| FR-14 | UC12 Reserve Resource Package | AT-01, AT-06 |
-| FR-15 | UC12 Reserve Resource Package | AT-01, AT-03 |
-| FR-16 | UC12 Reserve Resource Package | AT-02 |
-| FR-17 | UC12 Reserve Resource Package | AT-02, AT-10 |
-| FR-18 | UC12 Reserve Resource Package | AT-01 |
-| FR-19 | UC13 Automatically Allocate Resources | AT-04 |
-| FR-20 | UC13 Automatically Allocate Resources | AT-04, AT-05 |
-| FR-21 | UC13 Automatically Allocate Resources | AT-05 |
-| FR-22 | UC22 Report Task Completion | AT-09 |
-| FR-23 | UC22 Report Task Completion | AT-08 |
-| FR-24 | UC22 Report Task Completion | AT-07 |
-| FR-36 | UC07 Generate SLA Report | AT-11 |
-| FR-37 | UC07 Generate SLA Report | AT-11, AT-12 |
-| FR-38 | UC07 Generate SLA Report | AT-11, AT-12 |
-| FR-39 | UC07 Generate SLA Report | AT-11 |
-| FR-40 | UC05 View / Generate Monthly Reports | AT-13 |
-| FR-41 | UC07 Generate SLA Report | AT-14 |
-| FR-42 | UC07 Generate SLA Report | AT-15 |
+| FR-01 | UC12 Reserve Resource Package | AT-01, AT-06 |
+| FR-02 | UC12 Reserve Resource Package | AT-01, AT-03 |
+| FR-03 | UC12 Reserve Resource Package | AT-02 |
+| FR-04 | UC12 Reserve Resource Package | AT-02, AT-10 |
+| FR-05 | UC12 Reserve Resource Package | AT-01 |
+| FR-06 | UC13 Automatically Allocate Resources | AT-04 |
+| FR-07 | UC13 Automatically Allocate Resources | AT-04, AT-05 |
+| FR-08 | UC13 Automatically Allocate Resources | AT-05 |
+| FR-09 | UC22 Report Task Completion | AT-09 |
+| FR-10 | UC22 Report Task Completion | AT-08 |
+| FR-11 | UC22 Report Task Completion | AT-07 |
+| FR-12 | UC07 Generate SLA Report | AT-11 |
+| FR-13 | UC07 Generate SLA Report | AT-11, AT-12 |
+| FR-14 | UC07 Generate SLA Report | AT-11, AT-12 |
+| FR-15 | UC07 Generate SLA Report | AT-11 |
+| FR-16 | UC05 View / Generate Monthly Reports | AT-13 |
+| FR-17 | UC07 Generate SLA Report | AT-14 |
+| FR-18 | UC07 Generate SLA Report | AT-15 |
 | NFR-01 | UC12 Reserve Resource Package | AT-01 |
+| NFR-02 | UC12 Reserve Resource Package | AT-01 |
 | NFR-03 | UC07 Generate SLA Report | AT-16 |
 | NFR-04 | UC12 Reserve Resource Package | AT-03 |
 | NFR-05 | UC12 Reserve Resource Package | AT-02, AT-10 |
-| NFR-08 | UC22 Report Task Completion, UC05 View / Generate Monthly Reports | AT-09, AT-13 |
-| NFR-11 | UC12 Reserve Resource Package | AT-02 |
-| FR-01 – FR-02 | UC01 Log In | Outside acceptance scope |
-| FR-03 | UC02 Manage Users and Permissions | Outside acceptance scope |
-| FR-04 | UC03 Load Initial Data | Outside acceptance scope |
-| FR-05 – FR-06 | UC04 View and Filter Event History | Outside acceptance scope |
-| FR-07 | UC08 Manage Equipment and Locations | Outside acceptance scope |
-| FR-08, FR-26 | UC09 Update Crew Availability | Outside acceptance scope |
-| FR-09 | UC24 Report Shift Start and Readiness | Outside acceptance scope |
-| FR-10 | UC10 Create Event | Outside acceptance scope |
-| FR-11 – FR-13 | UC11 Define Tasks and Dependencies | Outside acceptance scope |
-| FR-25 | UC23 Report Equipment Failure | Outside acceptance scope |
-| FR-27 | UC19 Replace Released Resource | Outside acceptance scope |
-| FR-28 – FR-29 | UC15 Cancel Task | Outside acceptance scope |
-| FR-30 | UC16 Cancel Event | Outside acceptance scope |
-| FR-31 | UC17 Close Event | Outside acceptance scope |
-| FR-32 – FR-33 | UC18 Process Settlement | Outside acceptance scope |
-| FR-34 | UC14 Monitor Open Events | Outside acceptance scope |
-| FR-35 | UC20, UC21 | Outside acceptance scope |
-| FR-43 | UC06 Generate Resource Utilization Report | Outside acceptance scope |
-| NFR-02, NFR-06, NFR-07, NFR-09, NFR-10, NFR-12, NFR-13 | System-wide | Outside acceptance scope |
+| NFR-06 | UC22 Report Task Completion, UC05 View / Generate Monthly Reports | AT-09, AT-13 |
+| NFR-07 | UC12 Reserve Resource Package | AT-02 |
 
 ---
 
